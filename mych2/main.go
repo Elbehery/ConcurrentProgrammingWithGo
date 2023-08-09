@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -13,12 +14,12 @@ func doWork(id int, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func main() {
+func sayHello() {
+	fmt.Println("Hello")
+}
 
-	wg := sync.WaitGroup{}
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go doWork(i, &wg)
-	}
-	wg.Wait()
+func main() {
+	go sayHello()
+	runtime.Gosched()
+	fmt.Println("finished main")
 }

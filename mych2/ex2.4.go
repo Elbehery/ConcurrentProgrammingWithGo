@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-func GrepDir(path, pattern string, file os.DirEntry, wg *sync.WaitGroup) {
+func MyGrepDir(path, pattern string, file os.DirEntry, wg *sync.WaitGroup) {
 	fullPath := filepath.Join(path, file.Name())
 	if file.IsDir() {
 		files, err := os.ReadDir(fullPath)
@@ -46,7 +46,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	for _, f := range files {
 		wg.Add(1)
-		go GrepDir(path, pat, f, &wg)
+		go MyGrepDir(path, pat, f, &wg)
 	}
 	wg.Wait()
 }

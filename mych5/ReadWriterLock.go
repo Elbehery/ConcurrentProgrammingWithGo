@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"sync"
-	"time"
 )
 
 type ReadWriteLock struct {
@@ -53,19 +51,19 @@ func (rwl *ReadWriteLock) WriteUnLock() {
 	rwl.cond.L.Unlock()
 }
 
-func main() {
-	rwMutex := NewReadWriteLock()
-	for i := 0; i < 2; i++ {
-		go func() {
-			for {
-				rwMutex.ReadLock()
-				time.Sleep(1 * time.Second)
-				fmt.Println("Read done")
-				rwMutex.ReadUnLock()
-			}
-		}()
-	}
-	time.Sleep(1 * time.Second)
-	rwMutex.WriteLock()
-	fmt.Println("Write finished")
-}
+//func main() {
+//	rwMutex := NewReadWriteLock()
+//	for i := 0; i < 2; i++ {
+//		go func() {
+//			for {
+//				rwMutex.ReadLock()
+//				time.Sleep(1 * time.Second)
+//				fmt.Println("Read done")
+//				rwMutex.ReadUnLock()
+//			}
+//		}()
+//	}
+//	time.Sleep(1 * time.Second)
+//	rwMutex.WriteLock()
+//	fmt.Println("Write finished")
+//}

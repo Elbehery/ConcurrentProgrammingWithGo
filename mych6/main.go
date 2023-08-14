@@ -5,6 +5,38 @@ import (
 	"sync"
 )
 
+type WaitGrp struct {
+	size int
+	cond *sync.Cond
+}
+
+func NewWaitGrp() *WaitGrp {
+	return &WaitGrp{cond: sync.NewCond(&sync.Mutex{})}
+}
+
+func (wg *WaitGrp) Add(delta int) {
+	wg.cond.L.Lock()
+	wg.size += delta
+	wg.cond.L.Unlock()
+}
+
+func (wg *WaitGrp) Wait() {
+	wg.cond.L.Lock()
+	for wg.size > 0 {
+		wg.cond.Wait()
+	}
+	wg.cond.L.Unlock()
+}
+
+func (wg *WaitGrp) Done() {
+	wg.cond.L.Lock()
+	wg.size--
+	if wg.size == 0 {
+		wg.cond.Broadcast()
+	}
+	wg.cond.L.Unlock()
+}
+
 // MyWaitGroup is a wait-group implementation based on Semaphore.
 type MyWaitGroup struct {
 	s *sema

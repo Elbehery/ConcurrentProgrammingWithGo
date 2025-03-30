@@ -13,19 +13,22 @@ func main() {
     dir := os.Args[1]
     files, _ := os.ReadDir(dir)
     hMd5 := md5.New()
-    var prev, next sync.WaitGroup
+    var prev, next *sync.WaitGroup
     for _, file := range files {
         if !file.IsDir() {
-            next = sync.WaitGroup{}
+            next = &sync.WaitGroup{}
+            next.Add(1)
             go func(filename string, prev, next *sync.WaitGroup) {
                 fpath := filepath.Join(dir, filename)
+                fmt.Println("Processing", fpath)
                 hashOnFile := listing10_1.FHash(fpath)
+                // If not the first iteration
                 if prev != nil {
                     prev.Wait()
                 }
                 hMd5.Write(hashOnFile)
                 next.Done()
-            }(file.Name(), &prev, &next)
+            }(file.Name(), prev, next)
             prev = next
         }
     }

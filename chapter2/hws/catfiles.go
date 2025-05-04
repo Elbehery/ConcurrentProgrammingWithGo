@@ -4,22 +4,26 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
+	"sync"
 )
 
 func main() {
 	fileNames := os.Args[1:]
+	var wg sync.WaitGroup
+
 	for _, f := range fileNames {
-		go printContent(f)
+		wg.Add(1)
+		go printContent(f, &wg)
 	}
 
-	time.Sleep(5 * time.Second)
+	wg.Wait()
 }
 
-func printContent(fileName string) {
+func printContent(fileName string, wg *sync.WaitGroup) {
 	data, err := os.ReadFile(fileName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(string(data))
+	wg.Done()
 }

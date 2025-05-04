@@ -6,57 +6,39 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
-	"time"
 )
 
-const allLetters = "abcdefghijklmnopqrstuvwxyz"
+const alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-type ConcurrentFrequencyTable struct {
-	table []int
-	mu    sync.RWMutex
-}
-
-func NewConcurrentFrequencyTable() *ConcurrentFrequencyTable {
-	return &ConcurrentFrequencyTable{
-		table: make([]int, 26),
-		mu:    sync.RWMutex{},
+func countLetters(url string, freq []int) {
+	resp, _ := http.Get(url)
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Fatal(resp.StatusCode)
 	}
-}
 
-func CountChars(url string, freqTable *ConcurrentFrequencyTable, wg *sync.WaitGroup) {
-	resp, err := http.Get(url)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	freqTable.mu.Lock()
+
 	for _, b := range data {
 		c := strings.ToLower(string(b))
-		index := strings.Index(allLetters, c)
-		if index >= 0 {
-			freqTable.table[index] += 1
+		idx := strings.Index(alphabet, c)
+		if idx >= 0 {
+			freq[idx]++
 		}
 	}
-	freqTable.mu.Unlock()
-	fmt.Printf("processing %s completed\n", url)
-	wg.Done()
 }
 
 func main() {
-	fmt.Println(time.Now())
-	freq := NewConcurrentFrequencyTable()
-	wg := sync.WaitGroup{}
-
-	for i := 1000; i <= 1200; i++ {
+	freq := make([]int, 26)
+	for i := 1000; i <= 1030; i++ {
 		url := fmt.Sprintf("https://rfc-editor.org/rfc/rfc%d.txt", i)
-		wg.Add(1)
-		CountChars(url, freq, &wg)
+		countLetters(url, freq)
 	}
-	wg.Wait()
-	for i, c := range allLetters {
-		fmt.Printf("%c-%d\n", c, freq.table[i])
+
+	for i, c := range alphabet {
+		fmt.Printf("%c-%d\n", c, freq[i])
 	}
-	fmt.Println(time.Now())
 }

@@ -41,7 +41,19 @@ func (rwl *ReaderWriterLock) RLock() {
 }
 
 func (rwl *ReaderWriterLock) TryReadLock() bool {
-	return rwl.readersLock.TryLock()
+	if rwl.readersLock.TryLock() {
+		global := true
+		if rwl.readerCounter == 0 {
+			global = rwl.globalLock.TryLock()
+		}
+		if global {
+			rwl.readerCounter++
+		}
+		rwl.readersLock.Unlock()
+		return global
+	} else {
+		return false
+	}
 }
 
 func (rwl *ReaderWriterLock) UnLock() {

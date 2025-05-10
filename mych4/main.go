@@ -3,33 +3,48 @@ package main
 import "sync"
 
 type ReaderWriterLock struct {
-	readersCounter int
-	readersLock    sync.Mutex
-	globalLock     sync.Mutex
+	readerCounter           int
+	readersLock, globalLock sync.Mutex
 }
 
-func (l *ReaderWriterLock) RLock() {
-	l.readersLock.Lock()
-	l.readersCounter++
-	if l.readersCounter == 1 {
-		l.globalLock.Lock()
+func NewReaderWriterLock() *ReaderWriterLock {
+	return &ReaderWriterLock{
+		readerCounter: 0,
+		readersLock:   sync.Mutex{},
+		globalLock:    sync.Mutex{},
 	}
-	l.readersLock.Unlock()
 }
 
-func (l *ReaderWriterLock) RUnLock() {
-	l.readersLock.Lock()
-	l.readersCounter--
-	if l.readersCounter == 0 {
-		l.globalLock.Unlock()
+func (rwl *ReaderWriterLock) Lock() {
+	rwl.globalLock.Lock()
+}
+
+func (rwl *ReaderWriterLock) TryLock() bool {
+	return rwl.globalLock.TryLock()
+}
+
+func (rwl *ReaderWriterLock) RLock() {
+	rwl.readersLock.Lock()
+	rwl.readerCounter++
+	if rwl.readerCounter == 1 {
+		rwl.globalLock.Lock()
 	}
-	l.readersLock.Unlock()
+	rwl.readersLock.Unlock()
 }
 
-func (l *ReaderWriterLock) Lock() {
-	l.globalLock.Lock()
+func (rwl *ReaderWriterLock) TryReadLock() bool {
+	return rwl.readersLock.TryLock()
 }
 
-func (l *ReaderWriterLock) UnLock() {
-	l.globalLock.Unlock()
+func (rwl *ReaderWriterLock) UnLock() {
+	rwl.globalLock.Unlock()
+}
+
+func (rwl *ReaderWriterLock) RUnLock() {
+	rwl.readersLock.Lock()
+	rwl.readerCounter--
+	if rwl.readerCounter == 0 {
+		rwl.globalLock.Unlock()
+	}
+	rwl.readersLock.Unlock()
 }

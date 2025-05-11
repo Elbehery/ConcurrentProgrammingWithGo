@@ -1,69 +1,74 @@
 package main
 
 import (
+	"fmt"
 	"sync"
+	"time"
 )
 
-type ReadWriteLock struct {
-	activeReaders  int
-	waitingWriters int
-	activeWriter   bool
-	cond           *sync.Cond
+type ReadWriteMutex struct {
+	readersCounter, writersWaiting int
+	writerActive                   bool
+	cond                           *sync.Cond
 }
 
-func NewReadWriteLock() *ReadWriteLock {
-	return &ReadWriteLock{cond: sync.NewCond(&sync.Mutex{})}
-}
-
-func (rwl *ReadWriteLock) ReadLock() {
-	rwl.cond.L.Lock()
-	for rwl.waitingWriters > 0 || rwl.activeWriter {
-		rwl.cond.Wait()
+func NewReadWriteMutex() *ReadWriteMutex {
+	return &ReadWriteMutex{
+		cond: &sync.Cond{
+			L: &sync.Mutex{},
+		},
 	}
-	rwl.activeReaders++
-	rwl.cond.L.Unlock()
 }
 
-func (rwl *ReadWriteLock) WriteLock() {
-	rwl.cond.L.Lock()
-	rwl.waitingWriters++
-	for rwl.activeWriter || rwl.activeReaders > 0 {
-		rwl.cond.Wait()
+func (rw *ReadWriteMutex) ReadLock() {
+	rw.cond.L.Lock()
+	if rw.writerActive || rw.writersWaiting > 0 {
+		rw.cond.Wait()
 	}
-	rwl.waitingWriters--
-	rwl.activeWriter = true
-	rwl.cond.L.Unlock()
+	rw.readersCounter++
+	rw.cond.L.Unlock()
 }
 
-func (rwl *ReadWriteLock) ReadUnLock() {
-	rwl.cond.L.Lock()
-	rwl.activeReaders--
-	if rwl.activeReaders == 0 {
-		rwl.cond.Broadcast()
+func (rw *ReadWriteMutex) WriteLock() {
+	rw.cond.L.Lock()
+	rw.writersWaiting++
+	if rw.readersCounter > 0 || rw.writerActive {
+		rw.cond.Wait()
 	}
-	rwl.cond.L.Unlock()
+	rw.writersWaiting--
+	rw.writerActive = true
+	rw.cond.L.Unlock()
 }
 
-func (rwl *ReadWriteLock) WriteUnLock() {
-	rwl.cond.L.Lock()
-	rwl.activeWriter = false
-	rwl.cond.Broadcast()
-	rwl.cond.L.Unlock()
+func (rw *ReadWriteMutex) ReadUnlock() {
+	rw.cond.L.Lock()
+	rw.readersCounter--
+	if rw.readersCounter == 0 {
+		rw.cond.Broadcast()
+	}
+	rw.cond.L.Unlock()
 }
 
-//func main() {
-//	rwMutex := NewReadWriteLock()
-//	for i := 0; i < 2; i++ {
-//		go func() {
-//			for {
-//				rwMutex.ReadLock()
-//				time.Sleep(1 * time.Second)
-//				fmt.Println("Read done")
-//				rwMutex.ReadUnLock()
-//			}
-//		}()
-//	}
-//	time.Sleep(1 * time.Second)
-//	rwMutex.WriteLock()
-//	fmt.Println("Write finished")
-//}
+func (rw *ReadWriteMutex) WriteUnlock() {
+	rw.cond.L.Lock()
+	rw.writerActive = false
+	rw.cond.Broadcast()
+	rw.cond.L.Unlock()
+}
+
+func main() {
+	rwMutex := NewReadWriteMutex()
+	for i := 0; i < 2; i++ {
+		go func() {
+			for {
+				rwMutex.ReadLock()
+				time.Sleep(1 * time.Second)
+				fmt.Println("Read done")
+				rwMutex.ReadUnlock()
+			}
+		}()
+	}
+	time.Sleep(1 * time.Second)
+	rwMutex.WriteLock()
+	fmt.Println("Write finished")
+}

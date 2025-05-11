@@ -7,9 +7,9 @@ import (
 )
 
 type ReadWriteMutex struct {
-	readersCounter, writersWaiting int
-	writerActive                   bool
-	cond                           *sync.Cond
+	readerCounter, writersWaiting int
+	activeWriter                  bool
+	cond                          *sync.Cond
 }
 
 func NewReadWriteMutex() *ReadWriteMutex {
@@ -20,40 +20,40 @@ func NewReadWriteMutex() *ReadWriteMutex {
 	}
 }
 
-func (rw *ReadWriteMutex) ReadLock() {
-	rw.cond.L.Lock()
-	if rw.writerActive || rw.writersWaiting > 0 {
-		rw.cond.Wait()
+func (rwm *ReadWriteMutex) RLock() {
+	rwm.cond.L.Lock()
+	if rwm.activeWriter || rwm.writersWaiting > 0 {
+		rwm.cond.Wait()
 	}
-	rw.readersCounter++
-	rw.cond.L.Unlock()
+	rwm.readerCounter++
+	rwm.cond.L.Unlock()
 }
 
-func (rw *ReadWriteMutex) WriteLock() {
-	rw.cond.L.Lock()
-	rw.writersWaiting++
-	if rw.readersCounter > 0 || rw.writerActive {
-		rw.cond.Wait()
+func (rwm *ReadWriteMutex) RUnLock() {
+	rwm.cond.L.Lock()
+	rwm.readerCounter--
+	if rwm.readerCounter == 0 {
+		rwm.cond.Broadcast()
 	}
-	rw.writersWaiting--
-	rw.writerActive = true
-	rw.cond.L.Unlock()
+	rwm.cond.L.Unlock()
 }
 
-func (rw *ReadWriteMutex) ReadUnlock() {
-	rw.cond.L.Lock()
-	rw.readersCounter--
-	if rw.readersCounter == 0 {
-		rw.cond.Broadcast()
+func (rwm *ReadWriteMutex) Lock() {
+	rwm.cond.L.Lock()
+	rwm.writersWaiting++
+	if rwm.activeWriter || rwm.readerCounter > 0 {
+		rwm.cond.Wait()
 	}
-	rw.cond.L.Unlock()
+	rwm.writersWaiting--
+	rwm.activeWriter = true
+	rwm.cond.L.Unlock()
 }
 
-func (rw *ReadWriteMutex) WriteUnlock() {
-	rw.cond.L.Lock()
-	rw.writerActive = false
-	rw.cond.Broadcast()
-	rw.cond.L.Unlock()
+func (rwm *ReadWriteMutex) UnLock() {
+	rwm.cond.L.Lock()
+	rwm.activeWriter = false
+	rwm.cond.Broadcast()
+	rwm.cond.L.Unlock()
 }
 
 func main() {
@@ -61,14 +61,14 @@ func main() {
 	for i := 0; i < 2; i++ {
 		go func() {
 			for {
-				rwMutex.ReadLock()
+				rwMutex.RLock()
 				time.Sleep(1 * time.Second)
 				fmt.Println("Read done")
-				rwMutex.ReadUnlock()
+				rwMutex.RUnLock()
 			}
 		}()
 	}
 	time.Sleep(1 * time.Second)
-	rwMutex.WriteLock()
+	rwMutex.Lock()
 	fmt.Println("Write finished")
 }

@@ -32,29 +32,29 @@ func (s *semaphore) release() {
 	s.cnd.L.Unlock()
 }
 
-type MyWaitGroup struct {
+type MyWaitGroupSema struct {
 	sema *semaphore
 }
 
-func NewMyWaitGroup(size int) *MyWaitGroup {
-	return &MyWaitGroup{sema: newSemaphore(1 - size)}
+func NewMyWaitGroupSema(size int) *MyWaitGroupSema {
+	return &MyWaitGroupSema{sema: newSemaphore(1 - size)}
 }
 
-func (wg *MyWaitGroup) Wait() {
+func (wg *MyWaitGroupSema) Wait() {
 	wg.sema.acquire()
 }
 
-func (wg *MyWaitGroup) Done() {
+func (wg *MyWaitGroupSema) Done() {
 	wg.sema.release()
 }
 
-func doWork(id int, wg *MyWaitGroup) {
+func doWork(id int, wg *MyWaitGroupSema) {
 	fmt.Println(id, "Done working ")
 	wg.Done()
 }
 
 func main() {
-	wg := NewMyWaitGroup(4)
+	wg := NewMyWaitGroupSema(4)
 	for i := 1; i <= 4; i++ {
 		go doWork(i, wg)
 	}

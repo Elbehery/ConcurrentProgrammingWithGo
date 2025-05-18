@@ -7,30 +7,30 @@ import (
 
 type Semaphore struct {
 	permits int
-	cond    *sync.Cond
+	cnd     *sync.Cond
 }
 
 func NewSemaphore(n int) *Semaphore {
 	return &Semaphore{
 		permits: n,
-		cond:    sync.NewCond(&sync.Mutex{}),
+		cnd:     sync.NewCond(&sync.Mutex{}),
 	}
 }
 
 func (s *Semaphore) Acquire() {
-	s.cond.L.Lock()
+	s.cnd.L.Lock()
 	for s.permits <= 0 {
-		s.cond.Wait()
+		s.cnd.Wait()
 	}
 	s.permits--
-	s.cond.L.Unlock()
+	s.cnd.L.Unlock()
 }
 
 func (s *Semaphore) Release() {
-	s.cond.L.Lock()
+	s.cnd.L.Lock()
 	s.permits++
-	s.cond.Signal()
-	s.cond.L.Unlock()
+	s.cnd.Signal()
+	s.cnd.L.Unlock()
 }
 
 func main() {

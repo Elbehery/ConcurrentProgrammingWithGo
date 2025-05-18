@@ -39,6 +39,13 @@ func (wg *MyWaitGroup) Done() {
 	wg.cnd.L.Unlock()
 }
 
+func (wg *MyWaitGroup) TryWait() bool {
+	wg.cnd.L.Lock()
+	res := wg.size == 0
+	wg.cnd.L.Unlock()
+	return res
+}
+
 func goWork(id int, wg *MyWaitGroup) {
 	fmt.Println(id, "Done working ")
 	wg.Done()

@@ -2,25 +2,28 @@ package main
 
 import "sync"
 
-type MySemaphore struct {
+type Semaphore struct {
 	permits int
 	cond    *sync.Cond
 }
 
-func NewMySemaphore(n int) *MySemaphore {
-	return &MySemaphore{permits: n, cond: sync.NewCond(&sync.Mutex{})}
+func NewSemaphore(n int) *Semaphore {
+	return &Semaphore{
+		permits: n,
+		cond:    sync.NewCond(&sync.Mutex{}),
+	}
 }
 
-func (s *MySemaphore) Acquire() {
+func (s *Semaphore) Acquire() {
 	s.cond.L.Lock()
-	if s.permits <= 0 {
+	for s.permits <= 0 {
 		s.cond.Wait()
 	}
 	s.permits--
 	s.cond.L.Unlock()
 }
 
-func (s *MySemaphore) Release() {
+func (s *Semaphore) Release() {
 	s.cond.L.Lock()
 	s.permits++
 	s.cond.Signal()

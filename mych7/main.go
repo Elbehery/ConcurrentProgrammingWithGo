@@ -7,63 +7,67 @@ import (
 	"time"
 )
 
-type sema struct {
+type semaphore struct {
 	permits int
-	cond    *sync.Cond
+	cnd     *sync.Cond
 }
 
-func newSema(n int) *sema {
-	return &sema{
-		permits: n,
-		cond:    sync.NewCond(&sync.Mutex{}),
+func newSemaphore(permits int) *semaphore {
+	return &semaphore{
+		permits: permits,
+		cnd:     sync.NewCond(&sync.Mutex{}),
 	}
 }
 
-func (s *sema) acquire() {
-	s.cond.L.Lock()
+func (s *semaphore) acquire() {
+	s.cnd.L.Lock()
 	for s.permits <= 0 {
-		s.cond.Wait()
+		s.cnd.Wait()
 	}
 	s.permits--
-	s.cond.L.Unlock()
+	s.cnd.L.Unlock()
 }
 
-func (s *sema) release() {
-	s.cond.L.Lock()
+func (s *semaphore) release() {
+	s.cnd.L.Lock()
 	s.permits++
-	s.cond.Signal()
-	s.cond.L.Unlock()
+	s.cnd.Signal()
+	s.cnd.L.Unlock()
 }
 
 type MyChannel[M any] struct {
-	capacitySema *sema
-	sizeSema     *sema
-	mux          sync.Mutex
-	buffer       *list.List
+	buf               *list.List
+	capSema, sizeSema *semaphore
+	mux               sync.Mutex
 }
 
 func NewMyChannel[M any](capacity int) *MyChannel[M] {
 	return &MyChannel[M]{
-		capacitySema: newSema(capacity),
-		sizeSema:     newSema(0),
-		buffer:       list.New(),
+		buf:      list.New(),
+		capSema:  newSemaphore(capacity),
+		sizeSema: newSemaphore(0),
+		mux:      sync.Mutex{},
 	}
 }
 
-func (c *MyChannel[M]) Send(msg M) {
-	c.capacitySema.acquire()
+func (c *MyChannel[M]) Send(m any) {
+	c.capSema.acquire()
+
 	c.mux.Lock()
-	c.buffer.PushBack(msg)
+	c.buf.PushBack(m)
 	c.mux.Unlock()
+
 	c.sizeSema.release()
 }
 
 func (c *MyChannel[M]) Receive() M {
-	c.capacitySema.release()
 	c.sizeSema.acquire()
+
 	c.mux.Lock()
-	v := c.buffer.Remove(c.buffer.Front()).(M)
+	v := c.buf.Remove(c.buf.Front()).(M)
 	c.mux.Unlock()
+
+	c.capSema.release()
 
 	return v
 }

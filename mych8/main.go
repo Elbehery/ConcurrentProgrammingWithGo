@@ -6,37 +6,28 @@ import (
 	"time"
 )
 
-func generateTemp() chan int {
+func generateNumbers() chan int {
 	output := make(chan int)
 	go func() {
-		temp := 50 //fahrenheit
 		for {
-			output <- temp
-			temp += rand.Intn(3) - 1
+			output <- rand.Intn(10)
 			time.Sleep(200 * time.Millisecond)
 		}
 	}()
 	return output
 }
 
-func outputTemp(input chan int) {
-	go func() {
-		for {
-			fmt.Println("Current temp:", <-input)
-			time.Sleep(2 * time.Second)
-		}
-	}()
-}
-
 func main() {
-	input := make(chan int)
-	outputTemp(input)
-	temp := generateTemp()
+	output := generateNumbers()
+	timeout := time.After(5 * time.Second)
 
 	for {
 		select {
-		case t := <-temp:
-			input <- t
+		case n := <-output:
+			fmt.Println(n)
+		case <-timeout:
+			fmt.Println("Stopping reading after timeout")
+			return
 		}
 	}
 }

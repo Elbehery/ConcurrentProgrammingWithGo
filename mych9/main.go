@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func printNums(numsCh <-chan int, quitCh chan<- struct{}) {
+func printNums(numsCh <-chan int, quitCh chan struct{}) {
 	go func() {
 		for i := 0; i < 10; i++ {
 			fmt.Println(<-numsCh)

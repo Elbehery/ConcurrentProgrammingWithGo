@@ -2,31 +2,41 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
-func writeEvery(msg string, duration time.Duration) <-chan string {
-	ch := make(chan string)
+func generateTemp() chan int {
+	output := make(chan int)
 	go func() {
+		temp := 50 //fahrenheit
 		for {
-			time.Sleep(duration)
-			ch <- msg
+			output <- temp
+			temp += rand.Intn(3) - 1
+			time.Sleep(200 * time.Millisecond)
 		}
 	}()
+	return output
+}
 
-	return ch
+func outputTemp(input chan int) {
+	go func() {
+		for {
+			fmt.Println("Current temp:", <-input)
+			time.Sleep(2 * time.Second)
+		}
+	}()
 }
 
 func main() {
-	chA := writeEvery("A", 1*time.Second)
-	chB := writeEvery("B", 2*time.Second)
+	input := make(chan int)
+	outputTemp(input)
+	temp := generateTemp()
 
 	for {
 		select {
-		case a := <-chA:
-			fmt.Println(a)
-		case b := <-chB:
-			fmt.Println(b)
+		case t := <-temp:
+			input <- t
 		}
 	}
 }

@@ -1,4 +1,4 @@
-package mych13
+package main
 
 import (
 	"runtime"
@@ -25,5 +25,7 @@ func (s *SpinLock) UnLock() {
 }
 
 func NewSpinLock() Locker {
-	return &SpinLock{val: int32(0)}
+	return &SpinLock{
+		val: 0,
+	}
 }
